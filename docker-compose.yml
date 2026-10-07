@@ -19,6 +19,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging:
+      driver: journald
+      options:
+        labels: "application"
+        tag: "elasticsearch|{{.ImageName}}|{{.DaemonName}}"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.2
@@ -30,6 +35,11 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
+    logging:
+      driver: journald
+      options:
+        labels: "application"
+        tag: "kibana|{{.ImageName}}|{{.DaemonName}}"
 
 volumes:
   esdata:

@@ -1,0 +1,27 @@
+---
+- name: Setup localhost SIEM
+  hosts: localhost
+  become: true
+
+  vars:
+    packages:
+      - docker-compose
+      - syslog-ng
+
+  tasks:
+
+    - name: Install packages
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+    - name: Add syslog-ng config
+      ansible.builtin.copy:
+        src: ./etc/syslog-ng/conf.d/
+        dest: /etc/syslog-ng/conf.d/
+        mode: 0644
+
+    - name: Restart syslog-ng
+      ansible.builtin.systemd:
+        name: syslog-ng
+        state: restarted

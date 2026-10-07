@@ -5,13 +5,11 @@
 
   vars:
     packages:
-      - docker-compose
       - syslog-ng
 
   tasks:
-
-    - name: Install packages
-      ansible.builtin.apt:
+    - name: Install required packages
+      ansible.builtin.package:
         name: "{{ packages }}"
         state: present
 

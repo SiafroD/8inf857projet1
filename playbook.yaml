@@ -6,6 +6,7 @@
   vars:
     packages:
       - syslog-ng
+      - syslog-ng-mod-http
 
   tasks:
     - name: Install required packages
@@ -18,6 +19,16 @@
         src: ./etc/syslog-ng/conf.d/
         dest: /etc/syslog-ng/conf.d/
         mode: 0644
+
+    - name: Change syslog-ng.conf s_src line
+      ansible.builtin.lineinfile:
+        path: /etc/syslog-ng/syslog-ng.conf
+        regexp: '^\s*system\(\);\s*$'
+        line: systemd-journal();  
+
+    - name: Run syslog-ng syntax check
+      ansible.builtin.command:
+        cmd: syslog-ng --syntax-only
 
     - name: Restart syslog-ng
       ansible.builtin.systemd:

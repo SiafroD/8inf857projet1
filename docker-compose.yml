@@ -24,6 +24,9 @@ services:
       options:
         labels: "application"
         tag: "elasticsearch|{{.ImageName}}|{{.DaemonName}}"
+    networks:
+      test:
+        ipv4_address: 172.0.0.2
 
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.2
@@ -40,7 +43,18 @@ services:
       options:
         labels: "application"
         tag: "kibana|{{.ImageName}}|{{.DaemonName}}"
-
+    networks:
+      test:
+        ipv4_address: 172.0.0.3
 volumes:
   esdata:
     driver: local
+
+networks:
+  test:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-docker-0
+    ipam:
+      config:
+        - subnet: 172.0.0.0/16

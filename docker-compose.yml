@@ -16,7 +16,11 @@ services:
       - esdata:/usr/share/elasticsearch/data
       - eslogs:/usr/share/elasticsearch/logs
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
+      test:
+        [
+          "CMD-SHELL",
+          'curl -s http://localhost:9200/_cluster/health | grep -q ''"status"''',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -82,6 +86,28 @@ services:
     command: ["-F", "--no-caps"]
     networks:
       - siem
+
+  # Service d'initialisation : attend que Kibana soit prêt, importe l'export
+  # (Data View, visualisations, dashboard) puis s'arrête.
+  kibana-setup:
+    image: curlimages/curl:latest
+    container_name: kibana-setup
+    depends_on:
+      - kibana
+    volumes:
+      - ./kibana-export:/import:ro
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Attente de Kibana..."
+        until curl -s http://kibana:5601/api/status | grep -q '"level":"available"'; do sleep 5; done
+        echo "Import des objets Kibana..."
+        curl -s -X POST "http://kibana:5601/api/saved_objects/_import?overwrite=true" \
+          -H "kbn-xsrf: true" \
+          --form file=@/import/kibana-dashboard.ndjson
+        echo ""
+        echo "Import terminé."
 
 volumes:
   esdata:

@@ -21,8 +21,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      siem:
-        ipv4_address: 172.0.0.2
+      - siem
 
   kibana:
     build: ./docker/kibana
@@ -37,8 +36,7 @@ services:
     volumes:
       - kibana-logs:/usr/share/kibana/logs
     networks:
-      siem:
-        ipv4_address: 172.0.0.3
+      - siem
 
   syslog-ng:
     build: ./docker/syslog-ng
@@ -50,8 +48,7 @@ services:
       - "514:514/udp"
       - "601:601/tcp"
     networks:
-      siem:
-        ipv4_address: 172.0.0.4
+      - siem
 
   elasticsearch-log-agent:
     image: balabit/syslog-ng:3.38.1
@@ -98,6 +95,3 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-docker-0
-    ipam:
-      config:
-        - subnet: 172.0.0.0/16

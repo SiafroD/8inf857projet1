@@ -113,7 +113,42 @@ services:
     networks:
       - logs
 
+  # Network sensor for the public zone. It sniffs the public bridge, so it sees
+  # the scans and the raw traffic no single service logs. Needs the bridge in its
+  # own netns: that holds under Docker (rootful, bridge in the host netns), where
+  # com.docker.network.bridge.name gives it the fixed name "soc-public". Under our
+  # rootless Podman the bridge lives in Podman's own netns, out of host reach, so
+  # this one service exits there (AF_PACKET: Operation not permitted). The rules and
+  # the eve.json -> agent -> syslog-ng chain were checked live from nginx's netns.
+  suricata:
+    image: docker.io/jasonish/suricata:8.0.7
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    volumes:
+      # Outside /etc/suricata: the image's entrypoint chowns that folder and stops
+      # on a read-only file in it.
+      - ./suricata/local.rules:/rules/local.rules:ro
+      - suricata-logs:/var/log/suricata
+    command: ["-i", "soc-public", "-S", "/rules/local.rules", "-l", "/var/log/suricata"]
+
+  suricata-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    depends_on:
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - suricata-logs:/logs:ro
+      - ./suricata/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    networks:
+      - logs
+
 volumes:
   traefik-public-logs:
   ssh-logs:
   pgdata:
+  suricata-logs:

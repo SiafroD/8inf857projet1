@@ -1,0 +1,16 @@
+# A few illustrative signatures, enough to light up the lab scenarios. In a real
+# deploy you would add the Emerging Threats Open ruleset with suricata-update;
+# these are kept local so the sensor needs no internet.
+
+# Web reconnaissance, given away by the scanner's user agent.
+alert http any any -> any any (msg:"SOC Nikto scanner user-agent"; flow:to_server; http.user_agent; content:"Nikto"; nocase; sid:1000001; rev:1;)
+alert http any any -> any any (msg:"SOC sqlmap scanner user-agent"; flow:to_server; http.user_agent; content:"sqlmap"; nocase; sid:1000002; rev:1;)
+
+# Probing for files that should never be served.
+alert http any any -> any any (msg:"SOC sensitive path requested"; flow:to_server; http.uri; pcre:"/(\.git|\.env|wp-login|phpmyadmin)/i"; sid:1000003; rev:1;)
+
+# A SQL-injection shape in a URL.
+alert http any any -> any any (msg:"SOC SQL injection pattern in URI"; flow:to_server; http.uri; pcre:"/(union\s+select|or\s+1=1|\x27\s*or\s*\x27)/i"; sid:1000004; rev:1;)
+
+# Many new SSH connections from one host in a short window: brute-force shape.
+alert tcp any any -> any 22 (msg:"SOC SSH connection burst (possible brute force)"; flow:to_server; flags:S; threshold:type both, track by_src, count 10, seconds 30; sid:1000005; rev:1;)

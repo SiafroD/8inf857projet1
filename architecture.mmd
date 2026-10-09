@@ -8,7 +8,8 @@ flowchart LR
         BK["backend<br/>login + recherche"]
         DB[("base<br/>produits + users")]
         SSH["serveur SSH<br/>(cible)"]
-        APub["agent syslog-ng<br/>logs Traefik et SSH"]
+        SUR["Suricata<br/>capteur du pont public"]
+        APub["agent syslog-ng<br/>logs Traefik, SSH, Suricata"]
     end
 
     subgraph admin["admin/ : entrée interne"]
@@ -35,6 +36,8 @@ flowchart LR
     AG -->|"TCP 601<br/>réseau data"| SL
     TP -.->|"volume"| APub
     SSH -.->|"volume"| APub
+    SUR -.->|"volume"| APub
+    SUR -.->|"observe le pont"| TP
     APub -->|"TCP 601<br/>réseau logs"| SL
     TA -.->|"volume"| AAdm
     AAdm -->|"TCP 601<br/>réseau data"| SL

@@ -22,6 +22,8 @@ include:
 networks:
   # Public Traefik <-> exposed services.
   public:
+    driver_opts:
+      com.docker.network.bridge.name: soc-public
     ipam:
       config:
         # Fixed so that nginx knows which proxy to trust for the client's address.

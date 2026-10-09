@@ -121,7 +121,8 @@ services:
   # this one service exits there (AF_PACKET: Operation not permitted). The rules and
   # the eve.json -> agent -> syslog-ng chain were checked live from nginx's netns.
   suricata:
-    image: docker.io/jasonish/suricata:8.0.7
+    # jasonish/suricata 8.0.7 plus the frozen ET Open ruleset (suricata/et-open/VERSION).
+    build: ./suricata
     network_mode: host
     cap_add:
       - NET_ADMIN
@@ -132,7 +133,10 @@ services:
       # on a read-only file in it.
       - ./suricata/local.rules:/rules/local.rules:ro
       - suricata-logs:/var/log/suricata
-    command: ["-i", "soc-public", "-S", "/rules/local.rules", "-l", "/var/log/suricata"]
+    # ET Open from the image (/opt/et-open/rules), plus our own rules on top (-s adds,
+    # where -S would load only that file).
+    command: ["-i", "soc-public", "--set", "default-rule-path=/opt/et-open/rules",
+              "-s", "/rules/local.rules", "-l", "/var/log/suricata"]
 
   suricata-log-agent:
     image: balabit/syslog-ng:3.38.1

@@ -32,7 +32,7 @@ docker compose up
 podman compose up
 ```
 
-Une fois les services lancés, accéder au dashboard Kibana sur la page `http://kibana.localhost:5601`.
+Une fois les services lancés, accéder au dashboard Kibana sur la page `http://kibana.localhost:8080`.
 
 Pour importer le dashboard personnalisé sur Kibana :
 Menu vertical en haut à gauche -> **Management** : Stack Management -> **Kibana** : Saved Objects -> Import -> Sélectionner le fichier .ndjson -> Import -> Done

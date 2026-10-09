@@ -1,0 +1,30 @@
+flowchart LR
+    subgraph Sources[Sources de logs]
+        A[Applications / services]
+        B[SSH / Web / équipements réseau]
+    end
+
+    subgraph Collect[Collecte et stockage]
+        C[syslog-ng]
+        D[Elasticsearch]
+    end
+
+    subgraph Detection[Détection des menaces]
+        E[Wazuh]
+        F[Détection d'anomalies et d'intrusions]
+    end
+
+    subgraph Visualization[Visualisation]
+        G[Kibana]
+        H[Analyste / opérateur SOC]
+    end
+
+    A -->|Logs| C
+    B -->|Logs| C
+    C -->|Envoie les logs| D
+    D -->|Indexation / recherche| G
+    D -->|Analyse des événements| E
+    E -->|Alertes et findings| D
+    E -->|Détection| F
+    G -->|Dashboard / visualisation| H
+    F -->|Menaces détectées| H

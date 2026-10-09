@@ -4,7 +4,7 @@
 #   prod/   the public entry (Traefik on :80) and what it exposes: nginx, more later
 #   admin/  the internal entry (Traefik on 127.0.0.1:8080): Kibana, never public;
 #           reach it from another machine through a tunnel or a VPN
-#   siem/   syslog-ng, Elasticsearch, Kibana and their log agents
+#   siem/   syslog-ng, Elasticsearch, Kibana, Wazuh and their log agents
 #
 # Run it from this folder: `docker compose up -d`, or `podman compose up -d`, which
 # drives the same docker-compose binary through Podman's Docker API.
@@ -30,5 +30,9 @@ networks:
   admin:
   # Log sources -> syslog-ng. A source can send logs, nothing else.
   logs:
-  # syslog-ng, Elasticsearch, Kibana and the agents.
+  # syslog-ng, Elasticsearch, Kibana, Wazuh and the agents.
   data:
+    ipam:
+      config:
+        # Fixed so that Wazuh accepts syslog from this network only (siem/wazuh/ossec.conf).
+        - subnet: 10.201.4.0/24

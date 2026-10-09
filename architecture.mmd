@@ -14,11 +14,12 @@ flowchart LR
     end
 
     subgraph siem["siem/ : SIEM"]
-        SL["syslog-ng<br/>UDP 514 · TCP 601"]
-        ES[("Elasticsearch<br/>index syslog-*")]
-        KB["Kibana<br/>+ dashboard importé"]
+        SL["syslog-ng<br/>UDP 514 · TCP 601 · TCP 602"]
+        ES[("Elasticsearch<br/>index syslog-* et wazuh-alerts-*")]
+        KB["Kibana<br/>+ dashboards importés"]
         AG["agents syslog-ng<br/>logs d'ES et de Kibana"]
-        WZ["Wazuh<br/>(à brancher)"]
+        WZ["Wazuh manager<br/>analyse les logs"]
+        AWZ["agent syslog-ng<br/>alertes Wazuh"]
     end
 
     %% Chaque flèche nomme le réseau qu'elle emprunte ; aucun autre chemin entre zones.
@@ -34,5 +35,6 @@ flowchart LR
     KB -->|"réseau data"| ES
     Analyste -->|"kibana.localhost:8080"| TA
     TA -->|"réseau admin"| KB
-    SL -.->|"copie des logs ?"| WZ
-    WZ -.->|"alertes"| ES
+    SL -->|"copie des logs<br/>syslog TCP 514<br/>réseau data"| WZ
+    WZ -.->|"volume<br/>alerts.json"| AWZ
+    AWZ -->|"TCP 602<br/>réseau data"| SL

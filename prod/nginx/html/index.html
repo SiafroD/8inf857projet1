@@ -10,15 +10,30 @@
   form { display: flex; gap: .5rem; margin: 2rem 0; }
   input { flex: 1; padding: .5rem; font: inherit; }
   button { padding: .5rem 1rem; font: inherit; }
+  ul { padding-left: 1.2rem; }
 </style>
 <header>
   <h1>Boréal Outillage</h1>
   <a href="/login.html">Espace employé</a>
 </header>
 <p>Quincaillerie et outillage à Chicoutimi depuis 1987. Commandez en ligne, ramassez en magasin.</p>
-<form action="/recherche" method="get">
+<form id="search">
   <input name="q" placeholder="Rechercher un produit" aria-label="Rechercher un produit">
   <button>Rechercher</button>
 </form>
+<ul id="results"></ul>
 <p>Ouvert du lundi au samedi, 8 h à 18 h.</p>
+<script>
+  // The search box queries the backend, which logs every query.
+  document.getElementById('search').onsubmit = async (e) => {
+    e.preventDefault();
+    const q = e.target.elements.q.value;
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const items = await r.json();
+    const ul = document.getElementById('results');
+    ul.innerHTML = items.length
+      ? items.map(p => `<li>${p.name} — ${p.price.toFixed(2)} $</li>`).join('')
+      : '<li>Aucun résultat.</li>';
+  };
+</script>
 </html>

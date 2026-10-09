@@ -4,7 +4,9 @@ flowchart LR
 
     subgraph prod["prod/ : zone publique"]
         TP["traefik-public<br/>:80"]
-        NG["nginx<br/>site + page de connexion"]
+        NG["nginx<br/>site vitrine"]
+        BK["backend<br/>login + recherche"]
+        DB[("base<br/>produits + users")]
         SSH["serveur SSH<br/>(cible)"]
         APub["agent syslog-ng<br/>logs Traefik et SSH"]
     end
@@ -27,7 +29,10 @@ flowchart LR
     Attaquant -->|"HTTP :80"| TP
     Attaquant -.->|"SSH"| SSH
     TP -->|"réseau public"| NG
+    NG -->|"/api · réseau app"| BK
+    BK -->|"réseau db"| DB
     NG -->|"logs UDP 514<br/>réseau logs"| SL
+    BK -->|"logs applicatifs UDP 514<br/>réseau logs"| SL
     AG -->|"TCP 601<br/>réseau data"| SL
     TP -.->|"volume"| APub
     SSH -.->|"volume"| APub

@@ -19,20 +19,16 @@
 <p id="msg" role="status"></p>
 <p><a href="/">Retour au site</a></p>
 <script>
-  // nginx checks the credentials (auth_basic), so they travel as HTTP Basic.
+  // The backend checks the credentials against the users table and logs the attempt.
   document.getElementById('f').onsubmit = async (e) => {
     e.preventDefault();
-    const { u, p } = e.target.elements;
-    const auth = 'Basic ' + btoa(unescape(encodeURIComponent(u.value + ':' + p.value)));
-    const r = await fetch('/api/login', { headers: { Authorization: auth } });
-    if (!r.ok) {
+    const body = new URLSearchParams({ u: e.target.elements.u.value, p: e.target.elements.p.value });
+    const r = await fetch('/api/login', { method: 'POST', body });
+    if (r.ok) {
+      location.href = '/admin/';
+    } else {
       document.getElementById('msg').textContent = 'Identifiants invalides.';
-      return;
     }
-    const admin = await fetch('/admin/', { headers: { Authorization: auth } });
-    document.open();
-    document.write(await admin.text());
-    document.close();
   };
 </script>
 </html>

@@ -30,6 +30,10 @@ networks:
   admin:
   # Log sources -> syslog-ng. A source can send logs, nothing else.
   logs:
+  # nginx <-> backend.
+  app:
+  # backend <-> database; nothing else reaches it.
+  db:
   # syslog-ng, Elasticsearch, Kibana, Wazuh and the agents.
   data:
     ipam:

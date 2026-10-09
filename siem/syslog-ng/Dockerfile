@@ -9,6 +9,6 @@ RUN apt-get update && \
 
 COPY syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 
-EXPOSE 514/udp 601/tcp
+EXPOSE 514/udp 601/tcp 602/tcp
 
 

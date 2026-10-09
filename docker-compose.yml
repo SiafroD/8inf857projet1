@@ -1,6 +1,6 @@
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.2
+    build: ./docker/elasticsearch
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -19,17 +19,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    logging:
-      driver: journald
-      options:
-        labels: "application"
-        tag: "elasticsearch|{{.ImageName}}|{{.DaemonName}}"
     networks:
-      test:
+      siem:
         ipv4_address: 172.0.0.2
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.0.2
+    build: ./docker/kibana
     container_name: kibana
     depends_on:
       elasticsearch:
@@ -38,20 +33,28 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
-    logging:
-      driver: journald
-      options:
-        labels: "application"
-        tag: "kibana|{{.ImageName}}|{{.DaemonName}}"
     networks:
-      test:
+      siem:
         ipv4_address: 172.0.0.3
+
+  syslog-ng:
+    build: ./docker/syslog-ng
+    container_name: syslog-ng
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "514:514/udp"
+      - "601:601/tcp"
+    networks:
+      siem:
+        ipv4_address: 172.0.0.4
 volumes:
   esdata:
     driver: local
 
 networks:
-  test:
+  siem:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-docker-0

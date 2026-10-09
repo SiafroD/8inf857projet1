@@ -1,0 +1,10 @@
+http:
+  routers:
+    kibana:
+      rule: Host(`kibana.localhost`)
+      service: kibana
+  services:
+    kibana:
+      loadBalancer:
+        servers:
+          - url: http://kibana:5601

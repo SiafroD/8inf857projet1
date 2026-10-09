@@ -1,4 +1,4 @@
-FROM balabit/syslog-ng:3.38
+FROM balabit/syslog-ng:3.38.1
 
 COPY syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 

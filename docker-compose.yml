@@ -54,7 +54,7 @@ services:
         ipv4_address: 172.0.0.4
 
   elasticsearch-log-agent:
-    image: balabit/syslog-ng:3.38
+    image: balabit/syslog-ng:3.38.1
     container_name: elasticsearch-log-agent
     depends_on:
       elasticsearch:
@@ -70,7 +70,7 @@ services:
       - siem
 
   kibana-log-agent:
-    image: balabit/syslog-ng:3.38
+    image: balabit/syslog-ng:3.38.1
     container_name: kibana-log-agent
     depends_on:
       kibana:

@@ -1,6 +1,6 @@
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.2
+    build: ./docker/elasticsearch
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -14,22 +14,17 @@ services:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - eslogs:/usr/share/elasticsearch/logs
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
       interval: 10s
       timeout: 5s
       retries: 10
-    logging:
-      driver: journald
-      options:
-        labels: "application"
-        tag: "elasticsearch|{{.ImageName}}|{{.DaemonName}}"
     networks:
-      test:
-        ipv4_address: 172.0.0.2
+      - siem
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.0.2
+    build: ./docker/kibana
     container_name: kibana
     depends_on:
       elasticsearch:
@@ -38,23 +33,66 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
-    logging:
-      driver: journald
-      options:
-        labels: "application"
-        tag: "kibana|{{.ImageName}}|{{.DaemonName}}"
+    volumes:
+      - kibana-logs:/usr/share/kibana/logs
     networks:
-      test:
-        ipv4_address: 172.0.0.3
+      - siem
+
+  syslog-ng:
+    build: ./docker/syslog-ng
+    container_name: syslog-ng
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "514:514/udp"
+      - "601:601/tcp"
+    command: ["--no-caps"]
+    networks:
+      - siem
+
+  elasticsearch-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    container_name: elasticsearch-log-agent
+    depends_on:
+      elasticsearch:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - eslogs:/logs:ro
+      - ./docker/elasticsearch/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    networks:
+      - siem
+
+  kibana-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    container_name: kibana-log-agent
+    depends_on:
+      kibana:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - kibana-logs:/logs:ro
+      - ./docker/kibana/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    networks:
+      - siem
+
 volumes:
   esdata:
     driver: local
+  eslogs:
+    driver: local
+  kibana-logs:
+    driver: local
 
 networks:
-  test:
+  siem:
     driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-docker-0
-    ipam:
-      config:
-        - subnet: 172.0.0.0/16

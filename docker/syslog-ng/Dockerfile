@@ -5,5 +5,5 @@ COPY syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
 EXPOSE 514/udp 601/tcp
 
 ENTRYPOINT ["syslog-ng"]
-CMD ["--foreground", "--no-caps", "--cfgfile=/etc/syslog-ng/syslog-ng.conf"]
+CMD ["-F", "--no-caps", "-f", "/etc/syslog-ng/syslog-ng.conf"]
 

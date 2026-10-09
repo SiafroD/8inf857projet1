@@ -1,0 +1,10 @@
+ET Open ruleset for Suricata 8.0.7, frozen for the project: the image installs
+this archive, never the live feed, so the rules do not change under us.
+
+version:    11308
+downloaded: 2026-10-09
+from:       https://rules.emergingthreats.net/open/suricata-8.0.7/emerging.rules.tar.gz
+md5:        fd9f9a69160991d60782fef36deacbf6
+licenses:   inside the archive (rules/LICENSE, rules/BSD-License.txt)
+
+To update: replace the archive, update these lines, rebuild the suricata image.

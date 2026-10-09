@@ -62,7 +62,7 @@ services:
       - eslogs:/logs:ro
       - ./docker/elasticsearch/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
     entrypoint: ["syslog-ng"]
-    command: ["-F", "--no-caps", "-f", "/etc/syslog-ng/syslog-ng.conf"]
+    command: ["-F", "--no-caps"]
     networks:
       - siem
 
@@ -78,7 +78,7 @@ services:
       - kibana-logs:/logs:ro
       - ./docker/kibana/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
     entrypoint: ["syslog-ng"]
-    command: ["-F", "--no-caps", "-f", "/etc/syslog-ng/syslog-ng.conf"]
+    command: ["-F", "--no-caps"]
     networks:
       - siem
 

@@ -1,5 +1,34 @@
-# The lab, one folder per part. Run it from this folder: `docker compose up -d`,
-# or `podman compose up -d`, which drives the same docker-compose binary through
-# Podman's Docker API.
+# The lab, one folder per zone. Each folder's compose file holds its services;
+# the networks between zones are declared here, once, so this file is the map.
+#
+#   prod/   the public entry (Traefik on :80) and what it exposes: nginx, more later
+#   admin/  the internal entry (Traefik on 127.0.0.1:8080): Kibana, never public;
+#           reach it from another machine through a tunnel or a VPN
+#   siem/   syslog-ng, Elasticsearch, Kibana and their log agents
+#
+# Run it from this folder: `docker compose up -d`, or `podman compose up -d`, which
+# drives the same docker-compose binary through Podman's Docker API.
 include:
+  - prod/docker-compose.yml
+  - admin/docker-compose.yml
   - siem/docker-compose.yml
+
+# Networks between the zones. Docker keeps its networks apart on its own, and so
+# does Podman's Docker API (it sets isolate on every network it creates). Measured
+# with Podman 5.4: the four zones cannot reach each other, by name or by address.
+# logs and data are not "internal", although nothing in them needs the internet:
+# Podman writes no firewall rule for an internal network (netavark#1051), and the
+# public Traefik could then send fake logs to syslog-ng over UDP (measured).
+networks:
+  # Public Traefik <-> exposed services.
+  public:
+    ipam:
+      config:
+        # Fixed so that nginx knows which proxy to trust for the client's address.
+        - subnet: 10.201.1.0/24
+  # Internal Traefik <-> Kibana.
+  admin:
+  # Log sources -> syslog-ng. A source can send logs, nothing else.
+  logs:
+  # syslog-ng, Elasticsearch, Kibana and the agents.
+  data:

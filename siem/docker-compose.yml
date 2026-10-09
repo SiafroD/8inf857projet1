@@ -1,3 +1,5 @@
+# SIEM zone: syslog-ng, Elasticsearch, Kibana and their log agents. Nothing here is
+# reachable from the public zone; Kibana is served by the admin Traefik.
 services:
   elasticsearch:
     build: ./elasticsearch
@@ -10,8 +12,6 @@ services:
       memlock:
         soft: -1
         hard: -1
-    ports:
-      - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
       - eslogs:/usr/share/elasticsearch/logs
@@ -25,7 +25,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - siem
+      - data
 
   kibana:
     build: ./kibana
@@ -35,12 +35,11 @@ services:
         condition: service_healthy
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-      - "5601:5601"
     volumes:
       - kibana-logs:/usr/share/kibana/logs
     networks:
-      - siem
+      - admin
+      - data
 
   syslog-ng:
     build: ./syslog-ng
@@ -49,11 +48,12 @@ services:
       elasticsearch:
         condition: service_healthy
     ports:
-      - "514:514/udp"
-      - "601:601/tcp"
+      - "127.0.0.1:514:514/udp"
+      - "127.0.0.1:601:601/tcp"
     command: ["--no-caps"]
     networks:
-      - siem
+      - logs
+      - data
 
   elasticsearch-log-agent:
     image: balabit/syslog-ng:3.38.1
@@ -69,7 +69,7 @@ services:
     entrypoint: ["syslog-ng"]
     command: ["-F", "--no-caps"]
     networks:
-      - siem
+      - data
 
   kibana-log-agent:
     image: balabit/syslog-ng:3.38.1
@@ -85,7 +85,7 @@ services:
     entrypoint: ["syslog-ng"]
     command: ["-F", "--no-caps"]
     networks:
-      - siem
+      - data
 
   # Service d'initialisation : attend que Kibana soit prêt, importe l'export
   # (Data View, visualisations, dashboard) puis s'arrête.
@@ -109,7 +109,7 @@ services:
         echo ""
         echo "Import terminé."
     networks:
-      - siem
+      - data
 
 volumes:
   esdata:
@@ -118,9 +118,3 @@ volumes:
     driver: local
   kibana-logs:
     driver: local
-
-networks:
-  siem:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: br-docker-0

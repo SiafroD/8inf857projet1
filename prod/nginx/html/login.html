@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 22rem; margin: 4rem auto; padding: 0 1rem; color: #1d2733; }
+  label { display: block; margin-top: 1rem; }
+  input { width: 100%; padding: .5rem; font: inherit; box-sizing: border-box; }
+  button { margin-top: 1.5rem; padding: .5rem 1rem; font: inherit; }
+  #msg { margin-top: 1rem; min-height: 1.5em; }
+</style>
+<h1>Espace employé</h1>
+<form id="f">
+  <label>Utilisateur <input name="u" autocomplete="username" required></label>
+  <label>Mot de passe <input name="p" type="password" autocomplete="current-password" required></label>
+  <button>Se connecter</button>
+</form>
+<p id="msg" role="status"></p>
+<p><a href="/">Retour au site</a></p>
+<script>
+  // nginx checks the credentials (auth_basic), so they travel as HTTP Basic.
+  document.getElementById('f').onsubmit = async (e) => {
+    e.preventDefault();
+    const { u, p } = e.target.elements;
+    const auth = 'Basic ' + btoa(unescape(encodeURIComponent(u.value + ':' + p.value)));
+    const r = await fetch('/api/login', { headers: { Authorization: auth } });
+    if (!r.ok) {
+      document.getElementById('msg').textContent = 'Identifiants invalides.';
+      return;
+    }
+    const admin = await fetch('/admin/', { headers: { Authorization: auth } });
+    document.open();
+    document.write(await admin.text());
+    document.close();
+  };
+</script>
+</html>

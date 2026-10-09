@@ -1,0 +1,41 @@
+# Internal zone's entry, on the loopback only.
+services:
+  traefik-admin:
+    image: docker.io/library/traefik:v3.7.14
+    command:
+      - --entrypoints.admin.address=:80
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --accesslog=true
+      - --accesslog.filepath=/var/log/traefik/access.log
+      # Headers are dropped from the access log by default; the user agent is what
+      # gives sqlmap or Nikto away.
+      - --accesslog.fields.headers.names.User-Agent=keep
+      - --accesslog.fields.headers.names.Referer=keep
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - traefik-admin-logs:/var/log/traefik
+    networks:
+      - admin
+
+  # Same pattern as the SIEM's agents: reads the access log from the shared
+  # volume and forwards it to the central syslog-ng (TCP 601).
+  traefik-admin-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    depends_on:
+      traefik-admin:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - traefik-admin-logs:/logs:ro
+      - ./traefik/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    # On data: the admin entry is internal, like the SIEM's own agents.
+    networks:
+      - data
+
+volumes:
+  traefik-admin-logs:

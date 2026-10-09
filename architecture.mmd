@@ -1,30 +1,38 @@
 flowchart LR
-    subgraph Sources[Sources de logs]
-        A[Applications / services]
-        B[SSH / Web / équipements réseau]
+    Attaquant([Internet / attaquant])
+    Analyste([Analyste SOC<br/>tunnel ou VPN])
+
+    subgraph prod["prod/ : zone publique"]
+        TP["traefik-public<br/>:80"]
+        NG["nginx<br/>site + page de connexion"]
+        APub["agent syslog-ng<br/>log d'accès Traefik"]
     end
 
-    subgraph Collect[Collecte et stockage]
-        C[syslog-ng]
-        D[Elasticsearch]
+    subgraph admin["admin/ : entrée interne"]
+        TA["traefik-admin<br/>127.0.0.1:8080"]
+        AAdm["agent syslog-ng<br/>log d'accès Traefik"]
     end
 
-    subgraph Detection[Détection des menaces]
-        E[Wazuh]
-        F[Détection d'anomalies et d'intrusions]
+    subgraph siem["siem/ : SIEM"]
+        SL["syslog-ng<br/>UDP 514 · TCP 601"]
+        ES[("Elasticsearch<br/>index syslog-*")]
+        KB["Kibana<br/>+ dashboard importé"]
+        AG["agents syslog-ng<br/>logs d'ES et de Kibana"]
+        WZ["Wazuh<br/>(à brancher)"]
     end
 
-    subgraph Visualization[Visualisation]
-        G[Kibana]
-        H[Analyste / opérateur SOC]
-    end
-
-    A -->|Logs| C
-    B -->|Logs| C
-    C -->|Envoie les logs| D
-    D -->|Indexation / recherche| G
-    D -->|Analyse des événements| E
-    E -->|Alertes et findings| D
-    E -->|Détection| F
-    G -->|Dashboard / visualisation| H
-    F -->|Menaces détectées| H
+    %% Chaque flèche nomme le réseau qu'elle emprunte ; aucun autre chemin entre zones.
+    Attaquant -->|"HTTP :80"| TP
+    TP -->|"réseau public"| NG
+    NG -->|"logs UDP 514<br/>réseau logs"| SL
+    AG -->|"TCP 601<br/>réseau data"| SL
+    TP -.->|"volume"| APub
+    APub -->|"TCP 601<br/>réseau logs"| SL
+    TA -.->|"volume"| AAdm
+    AAdm -->|"TCP 601<br/>réseau data"| SL
+    SL -->|"_bulk HTTP<br/>réseau data"| ES
+    KB -->|"réseau data"| ES
+    Analyste -->|"kibana.localhost:8080"| TA
+    TA -->|"réseau admin"| KB
+    SL -.->|"copie des logs ?"| WZ
+    WZ -.->|"alertes"| ES

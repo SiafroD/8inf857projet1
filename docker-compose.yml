@@ -47,6 +47,7 @@ services:
     ports:
       - "514:514/udp"
       - "601:601/tcp"
+    command: ["--no-caps"]
     networks:
       - siem
 

@@ -14,6 +14,7 @@ services:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - eslogs:/usr/share/elasticsearch/logs
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
       interval: 10s
@@ -33,6 +34,8 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
+    volumes:
+      - kibana-logs:/usr/share/kibana/logs
     networks:
       siem:
         ipv4_address: 172.0.0.3
@@ -49,8 +52,45 @@ services:
     networks:
       siem:
         ipv4_address: 172.0.0.4
+
+  elasticsearch-log-agent:
+    image: balabit/syslog-ng:3.38
+    container_name: elasticsearch-log-agent
+    depends_on:
+      elasticsearch:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - eslogs:/logs:ro
+      - ./docker/elasticsearch/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["--foreground", "--no-caps", "--cfgfile=/etc/syslog-ng/syslog-ng.conf"]
+    networks:
+      - siem
+
+  kibana-log-agent:
+    image: balabit/syslog-ng:3.38
+    container_name: kibana-log-agent
+    depends_on:
+      kibana:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - kibana-logs:/logs:ro
+      - ./docker/kibana/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["--foreground", "--no-caps", "--cfgfile=/etc/syslog-ng/syslog-ng.conf"]
+    networks:
+      - siem
+
 volumes:
   esdata:
+    driver: local
+  eslogs:
+    driver: local
+  kibana-logs:
     driver: local
 
 networks:

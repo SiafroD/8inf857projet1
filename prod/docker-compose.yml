@@ -21,18 +21,19 @@ services:
 
   nginx:
     image: docker.io/library/nginx:1.30.5-alpine
-    # nginx resolves syslog-ng once, at start: it must be up by then.
+    # nginx resolves syslog-ng and backend once, at start: they must be up by then.
     depends_on:
       syslog-ng:
         condition: service_healthy
+      backend:
+        condition: service_started
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/html:/usr/share/nginx/html:ro
-      # admin / azerty123: weak on purpose, for the brute-force scenario.
-      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
     networks:
       - public
       - logs
+      - app
 
   # Same pattern as the SIEM's agents: reads the access log from the shared
   # volume and forwards it to the central syslog-ng (TCP 601).
@@ -51,6 +52,39 @@ services:
     # On logs, like every source of the public zone: it can send logs, nothing else.
     networks:
       - logs
+
+  # The shop's backend: DB-backed login and product search, logs every request
+  # to syslog-ng directly (UDP 514, program "backend").
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+      syslog-ng:
+        condition: service_healthy
+    networks:
+      - app
+      - db
+      - logs
+
+  # The products and users database. Only the backend can reach it (db network);
+  # nothing in the public zone can.
+  db:
+    image: docker.io/library/postgres:17.11-alpine
+    environment:
+      - POSTGRES_DB=shop
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app_pw
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d shop"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - db
 
   # A plain Linux host on the public zone: sshd only, so the lab has an SSH login
   # to attack. Reached from a container on the public network; also published on
@@ -82,3 +116,4 @@ services:
 volumes:
   traefik-public-logs:
   ssh-logs:
+  pgdata:

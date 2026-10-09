@@ -1,5 +1,9 @@
 # 8inf857projet1
 
+## Prérequis
+
+Avoir Docker Compose d'installé
+
 Architecture du projet : 
 
 **Outils à utiliser** :

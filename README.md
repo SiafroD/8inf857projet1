@@ -34,10 +34,11 @@ podman compose up
 
 Une fois les services lancés, accéder au dashboard Kibana sur la page `http://kibana.localhost:8080`.
 
-Pour importer le dashboard personnalisé sur Kibana :
-Menu vertical en haut à gauche -> **Management** : Stack Management -> **Kibana** : Saved Objects -> Import -> Sélectionner le fichier .ndjson -> Import -> Done
+Normalement le dashboard est déjà importé au démarrage.
+Pour y accéder : Menu vertical en haut à gauche -> **Analytics** : Dashboard
 
-Pour ouvrir le dashboard :
+Si le dashboard personnalisé ne s'est pas importé :
+Menu vertical en haut à gauche -> **Management** : Stack Management -> **Kibana** : Saved Objects -> Import -> Sélectionner le fichier .ndjson -> Import -> Done
 Juste après l'import : Cliquer sur **Dashboard Project 1** 
 
 Architecture du projet : 

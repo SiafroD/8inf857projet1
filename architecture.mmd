@@ -5,7 +5,8 @@ flowchart LR
     subgraph prod["prod/ : zone publique"]
         TP["traefik-public<br/>:80"]
         NG["nginx<br/>site + page de connexion"]
-        APub["agent syslog-ng<br/>log d'accès Traefik"]
+        SSH["serveur SSH<br/>(cible)"]
+        APub["agent syslog-ng<br/>logs Traefik et SSH"]
     end
 
     subgraph admin["admin/ : entrée interne"]
@@ -23,10 +24,12 @@ flowchart LR
 
     %% Chaque flèche nomme le réseau qu'elle emprunte ; aucun autre chemin entre zones.
     Attaquant -->|"HTTP :80"| TP
+    Attaquant -.->|"SSH"| SSH
     TP -->|"réseau public"| NG
     NG -->|"logs UDP 514<br/>réseau logs"| SL
     AG -->|"TCP 601<br/>réseau data"| SL
     TP -.->|"volume"| APub
+    SSH -.->|"volume"| APub
     APub -->|"TCP 601<br/>réseau logs"| SL
     TA -.->|"volume"| AAdm
     AAdm -->|"TCP 601<br/>réseau data"| SL

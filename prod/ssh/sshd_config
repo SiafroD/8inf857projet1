@@ -1,0 +1,9 @@
+Port 22
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication yes
+# VERBOSE adds the key fingerprint of a successful login, which the persistence
+# scenario needs; the brute-force lines ("Failed password for ...") are at INFO.
+LogLevel VERBOSE
+UsePAM yes
+Subsystem sftp /usr/lib/openssh/sftp-server

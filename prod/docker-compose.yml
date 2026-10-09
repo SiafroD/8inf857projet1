@@ -52,5 +52,33 @@ services:
     networks:
       - logs
 
+  # A plain Linux host on the public zone: sshd only, so the lab has an SSH login
+  # to attack. Reached from a container on the public network; also published on
+  # the box loopback (2222) for a demo through the tunnel, never on the Wi-Fi.
+  ssh:
+    build: ./ssh
+    ports:
+      - "127.0.0.1:2222:22"
+    volumes:
+      - ssh-logs:/var/log/sshd
+    networks:
+      - public
+
+  ssh-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    depends_on:
+      ssh:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - ssh-logs:/logs:ro
+      - ./ssh/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    networks:
+      - logs
+
 volumes:
   traefik-public-logs:
+  ssh-logs:

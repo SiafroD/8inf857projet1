@@ -1,0 +1,19 @@
+<group name="ids,suricata,">
+
+  <!-- The team's own signatures, prod/suricata/local.rules (sid 1000001 to 1000005). -->
+  <rule id="100300" level="10">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature_id">^100000\d$</field>
+    <description>Suricata (SOC): $(alert.signature)</description>
+  </rule>
+
+  <!-- Not alert.severity: it comes from the classtype, and policy rules such as
+       ET INFO Outgoing Basic Auth (2006380) get 1, the highest. ET rates each rule
+       in its metadata instead, Informational for those. -->
+  <rule id="100301" level="10">
+    <if_sid>86601</if_sid>
+    <field name="alert.metadata.signature_severity">Major|Critical</field>
+    <description>Suricata (ET major or critical): $(alert.signature)</description>
+  </rule>
+
+</group>

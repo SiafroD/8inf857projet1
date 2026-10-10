@@ -1,0 +1,11 @@
+<!--
+  Wazuh tries its program-less decoders (the stock json among them) only on events
+  with no program name, and syslog-ng gives every event one: eve.json lines arrive as
+  "suricata: {...}" and nothing decodes them. Named json so that the stock Suricata
+  rules (0475-suricata_rules.xml, decoded_as json) apply unchanged. A top-level
+  decoder sharing a stock decoder's name is not documented: checked on 4.14.8.
+-->
+<decoder name="json">
+  <program_name>^suricata$</program_name>
+  <plugin_decoder>JSON_Decoder</plugin_decoder>
+</decoder>

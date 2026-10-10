@@ -70,11 +70,11 @@ L'envoi est ciblé : seuil global niveau ≥ 12, plus un envoi forcé sur la for
 brute et sur la création d'un rôle pirate en base. Le bruit de scan (niveau 10)
 ne génère pas de mail.
 
-Déclencher et vérifier, par exemple avec la force brute SSH :
+Déclencher et vérifier, par exemple avec le rôle pirate en base (niveau 12) :
 
 ```sh
-sh attacks/run.sh 03-bruteforce/a-ssh
-# puis ouvrir http://127.0.0.1:8025 : un mail d'alerte Wazuh sur la force brute
+sh attacks/run.sh 05-persistence/b-database
+# puis ouvrir http://127.0.0.1:8025 : un mail Wazuh « rôle SUPERUSER créé »
 ```
 
 Configuration et seuil : [`../siem/wazuh/README.md`](../siem/wazuh/README.md)

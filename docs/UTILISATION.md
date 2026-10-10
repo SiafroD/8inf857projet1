@@ -57,8 +57,6 @@ Menu **Dashboards** :
   sous-scénarios.
 - **SOC – Vue analyste** : la vue d'ensemble (volume, gravité, MITRE, top règles
   / IP / services).
-- **Attaques par type** : une vue condensée transverse, une ligne = un type
-  d'incident.
 
 Lecture détaillée : [`VISUALISATION.md`](VISUALISATION.md).
 

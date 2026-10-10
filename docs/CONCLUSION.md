@@ -30,7 +30,7 @@ de ces trous. État après cette boucle :
 | Attaque | Vue ? | Comment |
 |---|---|---|
 | Scan web, injections SQL | **Oui** | signatures Suricata (règles SOC) |
-| Force brute SSH | **Oui** | échecs `sshd` décodés par Wazuh + rafale vue par Suricata |
+| Force brute SSH | **Oui** | échecs `sshd` décodés par Wazuh ; la rafale suivie du bon mot de passe lève une alerte « compte compromis » (règle 40112, niveau 12) |
 | Persistance SSH (clé, profil) | **Oui, fermé** | agent Wazuh + FIM temps réel sur `/home/sysadmin/.ssh` et `.bashrc` |
 | Persistance en base (rôle pirate) | **Oui, fermé** | journalisation DDL PostgreSQL + règle sur `CREATE/ALTER ROLE ... SUPERUSER` |
 | Scan de ports | Non | flux Suricata présents, aucune règle ne les exploite |
@@ -53,6 +53,15 @@ Autres limites :
 - **Labo, pas production** : sécurité Elasticsearch désactivée, mots de passe
   faibles volontaires, Mailpit à la place d'un vrai SMTP, enrôlement d'agent
   Wazuh sans mot de passe.
+
+## Retour sur nos choix
+
+Avec le recul, réimplémenter la stack syslog-ng → Elasticsearch → Kibana à côté
+de Wazuh est un peu redondant : Wazuh embarque déjà sa propre stack ELK, et dans
+un vrai déploiement on l'aurait sans doute utilisée directement plutôt que d'en
+monter une deuxième. Tout faire en conteneurs nous a aussi demandé plus de mise
+au point que des machines virtuelles où on installe les services à la main, même
+si au final c'est plus reproductible.
 
 ## Ce qui reste à faire
 
@@ -79,5 +88,7 @@ Dans l'ordre de valeur :
   source laisse.
 - **Agents Wazuh** sur plus d'hôtes (intégrité, inventaire, réponse active :
   bloquer une IP automatiquement).
+- **Orchestration** : faire tourner l'ensemble sur un cluster Kubernetes pour
+  le passage à l'échelle et la résilience.
 - **Enrichissement** : géolocalisation des IP, corrélation inter-sources,
   tableaux de conformité (PCI-DSS déjà fournis par Wazuh).

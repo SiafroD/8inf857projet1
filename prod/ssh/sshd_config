@@ -7,3 +7,7 @@ PubkeyAuthentication yes
 LogLevel VERBOSE
 UsePAM yes
 Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Lab: let the full brute-force burst reach sshd so Wazuh composite rule 5712 fires
+# (OpenSSH 9.x throttles a source after a few failures, which hides the burst).
+PerSourcePenalties no

@@ -1,35 +1,28 @@
-# Système de détection d'anomalies et de gestion de logs
+# Projet pratique 1 — Détection d'anomalies et gestion de logs (8INF857)
 
-Projet pratique 1 — 8INF857. Un petit SIEM qui collecte les logs d'un réseau
-simulé, les analyse pour détecter des intrusions, les stocke, les visualise, et
-notifie l'administrateur sur un cas confirmé.
+DUBOIS Emmanuel (DUBE28070400), FRUME Nathan (FRUN12070300), MERLO Johan (MERJ04070500), GIRARDY Raphaël (GIRR16040500)
 
-## Objectif
+## Le projet
 
-Monter une chaîne complète **collecte → détection → stockage → visualisation →
-alerte**, puis la mettre à l'épreuve avec cinq familles d'attaques et montrer
-leur détection.
+On a monté un petit SIEM, entièrement avec Docker, qui simule un réseau
+d'entreprise et surveille ce qui s'y passe. La chaîne va de la collecte des logs
+jusqu'à l'alerte : tout est récupéré par un collecteur central, stocké, analysé
+pour lever des alertes, affiché dans Kibana, et un courriel part quand un
+incident est confirmé.
 
-## Outils
-
-| Rôle | Outil |
-|---|---|
-| IDS/IPS | **Wazuh** (manager) + **Suricata** (capteur réseau) |
-| Collecteur de logs | **syslog-ng** |
-| Base de données | **Elasticsearch** |
-| Visualisation | **Kibana** |
-
-Choix assumé : **une seule base, Elasticsearch**. On n'installe ni le Wazuh
-indexer ni le Wazuh dashboard — Wazuh se limite au *manager* et ses alertes sont
-poussées dans Elasticsearch par syslog-ng (voir [`siem/wazuh/README.md`](siem/wazuh/README.md)).
+Une fois la plateforme en place, on l'a attaquée nous-mêmes (red team) avec cinq
+familles d'attaques, puis on a regardé ce que la défense arrivait vraiment à voir
+(blue team). C'est la partie la plus intéressante du projet : un SIEM ne détecte
+que ce qu'on lui a appris à chercher, et plusieurs attaques sont restées
+invisibles tant qu'on n'avait pas écrit la règle qui va avec. On revient
+là-dessus dans la conclusion.
 
 ## Architecture
 
-Le labo est découpé en **zones réseau isolées** : un service ne peut joindre que
-ce dont il a besoin. Toutes les sources envoient leurs logs au **syslog-ng
-central**, qui en garde une copie dans Elasticsearch (`syslog-*`) et en envoie
-une autre à Wazuh ; les alertes de Wazuh repartent dans Elasticsearch
-(`wazuh-alerts-4.x-*`) et s'affichent dans Kibana.
+Le réseau est découpé en zones isolées : un service ne peut joindre que ce dont
+il a besoin. On l'a vérifié depuis la zone publique — Elasticsearch, Kibana et la
+base ne sont pas joignables ; le seul passage vers le SIEM est l'agent du serveur
+SSH, qui parle au manager Wazuh et à rien d'autre.
 
 ```mermaid
 flowchart LR
@@ -55,7 +48,6 @@ flowchart LR
         SL["syslog-ng<br/>UDP 514 · TCP 601 · TCP 602"]
         ES[("Elasticsearch<br/>index syslog-* et wazuh-alerts-*")]
         KB["Kibana<br/>+ dashboards importés"]
-        AG["agents syslog-ng<br/>logs d'ES et de Kibana"]
         WZ["Wazuh manager<br/>analyse les logs"]
         AWZ["agent syslog-ng<br/>alertes Wazuh"]
     end
@@ -65,26 +57,72 @@ flowchart LR
     TP -->|"réseau public"| NG
     NG -->|"/api · réseau app"| BK
     BK -->|"réseau db"| DB
-    NG -->|"logs UDP 514<br/>réseau logs"| SL
-    BK -->|"logs applicatifs UDP 514<br/>réseau logs"| SL
-    AG -->|"TCP 601<br/>réseau data"| SL
-    TP -.->|"volume"| APub
-    SSH -.->|"volume"| APub
-    SUR -.->|"volume"| APub
+    NG -->|"logs UDP 514"| SL
+    BK -->|"logs UDP 514"| SL
     SUR -.->|"observe le pont"| TP
-    APub -->|"TCP 601<br/>réseau logs"| SL
-    TA -.->|"volume"| AAdm
-    AAdm -->|"TCP 601<br/>réseau data"| SL
-    SL -->|"_bulk HTTP<br/>réseau data"| ES
-    KB -->|"réseau data"| ES
+    APub -->|"TCP 601"| SL
+    AAdm -->|"TCP 601"| SL
+    SL -->|"_bulk HTTP"| ES
+    KB --> ES
     Analyste -->|"kibana.localhost:8080"| TA
     TA -->|"réseau admin"| KB
-    SL -->|"copie des logs<br/>syslog TCP 514<br/>réseau data"| WZ
-    WZ -.->|"volume<br/>alerts.json"| AWZ
-    AWZ -->|"TCP 602<br/>réseau data"| SL
+    SL -->|"copie des logs<br/>syslog TCP 514"| WZ
+    SSH -.->|"agent Wazuh<br/>réseau agents"| WZ
+    AWZ -->|"TCP 602"| SL
 ```
 
-Le fichier source du schéma : [`architecture.mmd`](architecture.mmd).
+Les logs suivent tous le même chemin : chaque service a, posé à côté de lui, un
+conteneur syslog-ng « sidecar » qui partage son volume de logs et les renvoie au
+syslog-ng central du SIEM. De là, une copie part dans Elasticsearch (index
+`syslog-*`) et une autre vers Wazuh, qui analyse et renvoie ses alertes dans
+Elasticsearch (index `wazuh-alerts-4.x-*`). Kibana lit les deux. Le schéma source
+est dans [`architecture.mmd`](architecture.mmd).
+
+### Les services, et pourquoi on les a pris
+
+En plus des services imposés (syslog-ng, Elasticsearch, Kibana) :
+
+- **Wazuh** plutôt que Snort, parce que plusieurs d'entre nous avaient déjà
+  travaillé avec.
+- **Suricata**, suggéré dans l'énoncé, pour ajouter des règles réseau par-dessus
+  Wazuh (on charge le jeu ET Open, ~53 000 règles).
+- **Traefik** en entrée, qui nous sert à la fois de reverse proxy et de source de
+  logs en plus.
+
+On a aussi ajouté des cibles pour les attaques : un site nginx avec un backend
+(login et recherche dans une base) et un serveur SSH.
+
+> **Suricata sous Podman / Docker rootless** : il ne peut pas écouter l'interface
+> physique de l'hôte (permissions), on le branche donc directement sur le pont de
+> nginx/Traefik. Conséquence : les familles 1 et 2, qui reposent sur ses
+> signatures, ne remontent que sous Docker.
+
+## Lancer le projet
+
+Il faut Docker avec Compose (ou Podman) et une connexion Internet — les images
+viennent du Docker Hub, il n'y a rien à installer à la main.
+
+```sh
+docker compose up -d        # ou : podman compose up -d
+```
+
+Ensuite, depuis l'hôte :
+
+- **Kibana** : http://kibana.localhost:8080 (via le Traefik admin, boucle locale)
+- **Site attaqué** : http://localhost
+- **Serveur SSH cible** : `ssh -p 2222 sysadmin@localhost`
+
+Le détail et les vérifications service par service sont dans
+[`docs/INSTALLATION.md`](docs/INSTALLATION.md).
+
+## Tester et visualiser
+
+- Jouer les attaques : [`docs/UTILISATION.md`](docs/UTILISATION.md) et
+  [`attacks/README.md`](attacks/README.md) (avec la justification de chaque
+  famille).
+- Lire les tableaux de bord : [`docs/VISUALISATION.md`](docs/VISUALISATION.md).
+- Analyse, limites et pistes d'amélioration :
+  [`docs/CONCLUSION.md`](docs/CONCLUSION.md).
 
 ## Structure du dépôt
 
@@ -98,22 +136,8 @@ attacks/               # red team : 5 familles x 2 scénarios + run.sh
 docs/                  # cette documentation
 ```
 
-## Démarrage
+## Utilisation de l'intelligence artificielle
 
-Prérequis et vérifications détaillés : [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
-
-```sh
-docker compose up -d        # ou : podman compose up -d
-```
-
-Puis, depuis la machine hôte :
-
-- **Kibana** : http://kibana.localhost:8080 (via Traefik admin, loopback seulement)
-- **Site attaqué** : http://localhost
-- **Serveur SSH cible** : `ssh -p 2222 sysadmin@localhost`
-
-## Tester et visualiser
-
-- Jouer les attaques : [`docs/UTILISATION.md`](docs/UTILISATION.md) et [`attacks/README.md`](attacks/README.md).
-- Lire les dashboards : [`docs/VISUALISATION.md`](docs/VISUALISATION.md).
-- Analyse, limites et perspectives : [`docs/CONCLUSION.md`](docs/CONCLUSION.md).
+Ce travail a été réalisé avec l'aide d'une IA générative. Une partie du contenu
+(code, configuration et documentation) a été produite ou reformulée avec son
+aide, puis relue et adaptée par l'équipe.

@@ -23,7 +23,6 @@ Le template `wz-es-4.x-8.x-template.json` est installé avant le démarrage de s
 
 ## Dashboard
 
-`kibana-setup` importe **« Wazuh – Vue d'ensemble »** (`siem/kibana-export/wazuh-overview.ndjson`) : un seul dashboard tiré des 7 [dashboards Wazuh pour Elastic](https://packages.wazuh.com/integrations/elastic/4.x-8.x/dashboards/wz-es-4.x-8.x-dashboards.ndjson), avec ce qui sert ici (Security events, Malware, Incident response). Vulnérabilités, AWS et Docker sont écartés : ces sources n'existent pas dans ce lab.
 
 Les panneaux sont découpés par service (`predecoder.program_name`) et non par `agent.name`, qui vaut toujours `wazuh-manager` sans agent. Le filtre « NOT Audit de config du conteneur Wazuh (SCA) » masque l'audit que le manager fait de son propre conteneur ; un clic sur le filtre le désactive.
 

@@ -21,6 +21,21 @@ ne produit *aucune* alerte, donc il n'y a rien à afficher côté alertes. Ce
 dashboard lit à la place les logs bruts `syslog-*` et montre le **volume par
 source dans le temps** — un pic trahit l'inondation, une chute le silence.
 
+![Famille 1 – Reconnaissance](images/famille-1-reconnaissance.png)
+*Reconnaissance : le scan web (Nikto, sqlmap, chemins sensibles) détecté par Suricata.*
+
+![Famille 2 – Injection SQL](images/famille-2-injection-sql.png)
+*Injection SQL : l'injection sur la recherche est vue (« web attack 200 ») ; celle sur le login apparaît comme un échec d'authentification, pas comme une injection.*
+
+![Famille 3 – Force brute](images/famille-3-force-brute.png)
+*Force brute : les échecs d'authentification SSH et web, et la rafale SSH.*
+
+![Famille 4 – Altération des logs](images/famille-4-alteration-logs.png)
+*Altération des logs : le programme `flood` (≈ 1000 lignes d'un coup) ressort dans « Programmes vus » — détection par anomalie, sans aucune règle.*
+
+![Famille 5 – Persistance](images/famille-5-persistance.png)
+*Persistance : le FIM détecte la clé ajoutée (règle 554) et le `.bashrc` modifié (règle 550) ; la création du rôle SUPERUSER PostgreSQL remonte en niveau 12.*
+
 ## Le tableau de bord « SOC – Vue analyste »
 
 C'est la vue d'ensemble, centrée sur les alertes (`wazuh-alerts-4.x-*`). Elle
@@ -35,6 +50,9 @@ sert à avoir l'état général en un coup d'œil, puis à pivoter vers l'enquê
 
 Un filtre « NOT … SCA » masque l'auto-audit que le manager Wazuh fait de son
 propre conteneur (du bruit, pas une menace) ; un clic le réactive.
+
+![SOC – Vue analyste](images/soc-global.png)
+*Vue analyste : 74 alertes, dont 24 de niveau ≥ 10 ; frise par service, tactiques MITRE, et le top des règles / sources / services visés.*
 
 ## La notification par courriel
 

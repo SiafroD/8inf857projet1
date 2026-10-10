@@ -76,6 +76,8 @@ services:
       - wazuh-logs:/var/ossec/logs
     networks:
       - data
+      # Lets the public-zone ssh box's agent reach 1514/1515; see the agents network note.
+      - agents
 
   # Logstash installs the Wazuh template itself; syslog-ng cannot, and the
   # template must be in before the first alert creates its index.

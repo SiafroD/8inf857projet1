@@ -17,3 +17,33 @@
   </rule>
 
 </group>
+
+<group name="postgresql,">
+
+  <rule id="100500" level="0">
+    <decoded_as>postgresql</decoded_as>
+    <description>PostgreSQL log message.</description>
+  </rule>
+
+  <!-- Role DDL is logged only because of log_statement=ddl; a new login role is a
+       classic database-persistence foothold. -->
+  <rule id="100501" level="10">
+    <if_sid>100500</if_sid>
+    <match>CREATE ROLE|CREATE USER|ALTER ROLE|ALTER USER</match>
+    <description>PostgreSQL: role created or altered - possible backdoor account.</description>
+    <mitre>
+      <id>T1136.001</id>
+    </mitre>
+  </rule>
+
+  <rule id="100502" level="12">
+    <if_sid>100501</if_sid>
+    <match>SUPERUSER</match>
+    <description>PostgreSQL: SUPERUSER role created or altered - privileged database backdoor.</description>
+    <mitre>
+      <id>T1136.001</id>
+      <id>T1078.001</id>
+    </mitre>
+  </rule>
+
+</group>

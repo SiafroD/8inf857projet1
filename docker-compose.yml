@@ -42,3 +42,9 @@ networks:
       config:
         # Fixed so that Wazuh accepts syslog from this network only (siem/wazuh/ossec.conf).
         - subnet: 10.201.4.0/24
+  # The Wazuh agent on the public-zone ssh box reaches wazuh-manager (1514/1515) here.
+  # Isolation trade-off: this is the one bridge from the public zone into the SIEM. It
+  # is deliberately narrow -- only ssh and wazuh-manager sit on it, so a rooted ssh box
+  # can reach the manager's agent ports but nothing else in data (ES, Kibana, syslog-ng
+  # stay unreachable), and the other zones are untouched.
+  agents:

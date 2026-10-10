@@ -1,85 +1,119 @@
-# 8inf857projet1
+# Système de détection d'anomalies et de gestion de logs
 
-## Architecture du projet
+Projet pratique 1 — 8INF857. Un petit SIEM qui collecte les logs d'un réseau
+simulé, les analyse pour détecter des intrusions, les stocke, les visualise, et
+notifie l'administrateur sur un cas confirmé.
 
-### Architecture des fichiers
+## Objectif
 
-Le projet est structuré de la façon suivante : 
-- Un fichier `docker-compose.yml` définissant les différents réseaux et les services utilisés.
-- Un dossier `siem` contenant les Dockerfiles des différents services du SIEM ainsi que leur fichiers de configuration, avec un Docker Compose liant les services entre eux. On retrouve également à l'intérieur un dossier `kibana-export` contenant le fichier de configuration du dashboard Kibana personnalisé.
-- Un dossier `prod` contenant les Dockerfiles et fichiers de configuration des services de production. Ces services sont ceux exposés sur Internet. Il contient également un Docker Compose afin de lancer tout ensemble.
-- Un dossier `admin` contenant les Dockerfiles et fichiers de configuration des services administrateurs. 
+Monter une chaîne complète **collecte → détection → stockage → visualisation →
+alerte**, puis la mettre à l'épreuve avec cinq familles d'attaques et montrer
+leur détection.
 
-### Services utilisés
+## Outils
 
-Du côté du SIEM, on utilise syslog-ng comme agrégateur de logs, qui sont ensuite envoyés à ElasticSearch pour le stockage et la navigation. Wazuh récupère également les logs de syslog-ng et les analyse afin de lever des alertes, et les envoie vers ElasticSearch. L'affichage est ensuite réalisé par Kibana qui permet la navigation et l'affichage des alertes.
+| Rôle | Outil |
+|---|---|
+| IDS/IPS | **Wazuh** (manager) + **Suricata** (capteur réseau) |
+| Collecteur de logs | **syslog-ng** |
+| Base de données | **Elasticsearch** |
+| Visualisation | **Kibana** |
 
-Dans le réseau prod, on retrouve à l'entrée un service Traefik qui récupère toutes les requêtes réalisées vers le reste des services dans ce réseau. Derrière, on a un serveur nginx avec un backend permettant l'authentification et la recherche d'objets dans une base de données. On retrouve également un service Suricata qui observe le port public de Traefik et qui classifie selon quelques règles (environ 53000) si une requête est bénine ou mauvaise. 
+Choix assumé : **une seule base, Elasticsearch**. On n'installe ni le Wazuh
+indexer ni le Wazuh dashboard — Wazuh se limite au *manager* et ses alertes sont
+poussées dans Elasticsearch par syslog-ng (voir [`siem/wazuh/README.md`](siem/wazuh/README.md)).
 
-Le réseau admin contient également un Traefik et permet de se connecter au dashboard Kibana depuis l'extérieur.
+## Architecture
 
-Afin de refléter une architecture réseau classique, nous avons décidé d'installer syslog-ng en tant que sidecar, c'est-à-dire installé sur un container parallèle possédant un volume partagé avec le service observé. Ces instances sidecar agrègent les logs du service observé et les envoient vers le container syslog-ng central situé dans le SIEM.
+Le labo est découpé en **zones réseau isolées** : un service ne peut joindre que
+ce dont il a besoin. Toutes les sources envoient leurs logs au **syslog-ng
+central**, qui en garde une copie dans Elasticsearch (`syslog-*`) et en envoie
+une autre à Wazuh ; les alertes de Wazuh repartent dans Elasticsearch
+(`wazuh-alerts-4.x-*`) et s'affichent dans Kibana.
 
-Pour une représentation plus visuelle : voir **architecture.mmd**.
+```mermaid
+flowchart LR
+    Attaquant([Internet / attaquant])
+    Analyste([Analyste SOC<br/>tunnel ou VPN])
 
-### Choix des services
+    subgraph prod["prod/ : zone publique"]
+        TP["traefik-public<br/>:80"]
+        NG["nginx<br/>site vitrine"]
+        BK["backend<br/>login + recherche"]
+        DB[("base<br/>produits + users")]
+        SSH["serveur SSH<br/>(cible)"]
+        SUR["Suricata<br/>capteur du pont public"]
+        APub["agent syslog-ng<br/>logs Traefik, SSH, Suricata"]
+    end
 
-Mis à part les services obligatoires (syslog-ng, ElasticSearch, Kibana), voici les motivations qui nous ont poussés à choisir les différents services :
-- **Wazuh** : Nous avons décidé d'implémenter Wazuh plutôt que Snort par souci de familiarité. En effet, nous étions plusieurs du groupe à avoir déjà travaillé avec Wazuh.
-- **Suricata** : Suggéré dans le sujet, nous avons voulu l'implémenter afin de rajouter des règles d'alertes en plus de Wazuh.
-- **Traefik** : Traefik nous permettait de combiner un proxy avec un outil de logging supplémentaire, afin de rajouter ceux-ci aux logs déjà présents.
+    subgraph admin["admin/ : entrée interne"]
+        TA["traefik-admin<br/>127.0.0.1:8080"]
+        AAdm["agent syslog-ng<br/>log d'accès Traefik"]
+    end
 
-> Attention: Suricata ne peut pas écouter sur l'interface physique de l'hôte en Docker rootless ou sur Podman par manque de permissions. Il est donc nécessaire de le brancher directement sur le Traefik/nginx.
+    subgraph siem["siem/ : SIEM"]
+        SL["syslog-ng<br/>UDP 514 · TCP 601 · TCP 602"]
+        ES[("Elasticsearch<br/>index syslog-* et wazuh-alerts-*")]
+        KB["Kibana<br/>+ dashboards importés"]
+        AG["agents syslog-ng<br/>logs d'ES et de Kibana"]
+        WZ["Wazuh manager<br/>analyse les logs"]
+        AWZ["agent syslog-ng<br/>alertes Wazuh"]
+    end
 
-Nous avons également choisi d'implémenter des applications pouvant servir de cibles aux scénarios d'attaque. Nous avons donc mis en place un serveur web nginx ainsi qu'un serveur SSH.
-
-
-## Installation et configuration
-
-### Lancement de l'architecture globale
-
-Le projet se base sur des images Docker récupérées sur le Docker Hub. Il n'y a donc pas d'installation à réaliser mis à part celles demandées pour lancer le projet.
-
-Afin de pouvoir lancer le projet il faut :
-- Une connexion Internet
-- Docker et Docker Compose ou Podman
-
-Afin de lancer le projet : 
-
-**Docker :**
-```bash
-docker compose up
+    Attaquant -->|"HTTP :80"| TP
+    Attaquant -.->|"SSH"| SSH
+    TP -->|"réseau public"| NG
+    NG -->|"/api · réseau app"| BK
+    BK -->|"réseau db"| DB
+    NG -->|"logs UDP 514<br/>réseau logs"| SL
+    BK -->|"logs applicatifs UDP 514<br/>réseau logs"| SL
+    AG -->|"TCP 601<br/>réseau data"| SL
+    TP -.->|"volume"| APub
+    SSH -.->|"volume"| APub
+    SUR -.->|"volume"| APub
+    SUR -.->|"observe le pont"| TP
+    APub -->|"TCP 601<br/>réseau logs"| SL
+    TA -.->|"volume"| AAdm
+    AAdm -->|"TCP 601<br/>réseau data"| SL
+    SL -->|"_bulk HTTP<br/>réseau data"| ES
+    KB -->|"réseau data"| ES
+    Analyste -->|"kibana.localhost:8080"| TA
+    TA -->|"réseau admin"| KB
+    SL -->|"copie des logs<br/>syslog TCP 514<br/>réseau data"| WZ
+    WZ -.->|"volume<br/>alerts.json"| AWZ
+    AWZ -->|"TCP 602<br/>réseau data"| SL
 ```
 
-**Podman :**
-```bash
-podman compose up
+Le fichier source du schéma : [`architecture.mmd`](architecture.mmd).
+
+## Structure du dépôt
+
+```
+docker-compose.yml     # la carte : inclut les 3 zones et déclare les réseaux
+prod/                  # zone publique : traefik, nginx, backend, base, ssh, suricata
+admin/                 # entrée interne : traefik-admin -> Kibana (loopback)
+siem/                  # le SIEM : syslog-ng, Elasticsearch, Kibana, Wazuh, agents
+  elasticsearch/  kibana/  syslog-ng/  wazuh/  kibana-export/
+attacks/               # red team : 5 familles x 2 scénarios + run.sh
+docs/                  # cette documentation
 ```
 
-Une fois les services lancés, accéder au dashboard Kibana sur la page `http://kibana.localhost:8080`.
+## Démarrage
 
-Normalement le dashboard est déjà importé au démarrage.
-Pour y accéder : Menu vertical en haut à gauche -> **Analytics** : Dashboard
+Prérequis et vérifications détaillés : [`docs/INSTALLATION.md`](docs/INSTALLATION.md).
 
-Si le dashboard personnalisé ne s'est pas importé :
-Menu vertical en haut à gauche -> **Management** : Stack Management -> **Kibana** : Saved Objects -> Import -> Sélectionner le fichier .ndjson -> Import -> Done
-Juste après l'import : Cliquer sur **Dashboard Project 1** 
+```sh
+docker compose up -d        # ou : podman compose up -d
+```
 
-### Scénarios d'attaque
+Puis, depuis la machine hôte :
 
-Les différents scénarios et la justification du choix sont indiqués dans `attacks/README.md`.
+- **Kibana** : http://kibana.localhost:8080 (via Traefik admin, loopback seulement)
+- **Site attaqué** : http://localhost
+- **Serveur SSH cible** : `ssh -p 2222 sysadmin@localhost`
 
-### Visualisation des logs d'alerte
+## Tester et visualiser
 
-
-## Analyse et conclusion
-
-Tout d'abord, il a été noté par les membres du groupe que réimplémenter la stack syslog-ng - ElasticSearch - Kibana était relativement contre-productif. En effet, il aurait été plus simple dans une architecture de prod d'implémenter directement Wazuh, qui se base déjà sur la stack ELK. 
-
-En terme de limites, faire le projet sous Docker rendait un peu plus complexe la mise en place du projet que le déploiement de machines virtuelles sur lesquelles il serait possible d'installer des services directement.
-
-Une amélioration possible serait de faire tourner l'ensemble du projet sur un noeud Kubernetes.
-
-## Utilisation de l'intelligence artificielle
-
-Le travail est élaboré en partenariat avec l’IA générative. Le contenu a été en partie généré ou reformulé par celle-ci.
+- Jouer les attaques : [`docs/UTILISATION.md`](docs/UTILISATION.md) et [`attacks/README.md`](attacks/README.md).
+- Lire les dashboards : [`docs/VISUALISATION.md`](docs/VISUALISATION.md).
+- Analyse, limites et perspectives : [`docs/CONCLUSION.md`](docs/CONCLUSION.md).

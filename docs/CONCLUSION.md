@@ -33,7 +33,7 @@ de ces trous. État après cette boucle :
 | Force brute SSH | **Oui** | échecs `sshd` décodés par Wazuh ; la rafale suivie du bon mot de passe lève une alerte « compte compromis » (règle 40112, niveau 12) |
 | Persistance SSH (clé, profil) | **Oui, fermé** | agent Wazuh + FIM temps réel sur `/home/sysadmin/.ssh` et `.bashrc` |
 | Persistance en base (rôle pirate) | **Oui, fermé** | journalisation DDL PostgreSQL + règle sur `CREATE/ALTER ROLE ... SUPERUSER` |
-| Scan de ports | Non | flux Suricata présents, aucune règle ne les exploite |
+| Scan de ports | **Oui, fermé** | règle Suricata sur une rafale de SYN depuis une même source (sid 1000006) → alerte Wazuh niveau 10 |
 | Altération des logs (silence, flood) | Non | aucune règle ne guette une source qui se tait ou un pic de volume |
 | Force brute *web* (backend) | Partiel | les échecs sont journalisés, mais pas de règle de corrélation « N échecs » côté backend |
 
@@ -67,10 +67,9 @@ si au final c'est plus reproductible.
 
 Dans l'ordre de valeur :
 
-1. **Règle sur les flux Suricata** pour le scan de ports.
-2. **Détection d'absence / de volume** pour l'altération des logs (voir
+1. **Détection d'absence / de volume** pour l'altération des logs (voir
    perspectives).
-3. **Règle de corrélation backend** « N échecs puis un succès » → compte web
+2. **Règle de corrélation backend** « N échecs puis un succès » → compte web
    compromis.
 
 ## Perspectives (veille technologique)

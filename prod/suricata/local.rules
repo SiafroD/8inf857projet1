@@ -14,3 +14,7 @@ alert http any any -> any any (msg:"SOC SQL injection pattern in URI"; flow:to_s
 
 # Many new SSH connections from one host in a short window: brute-force shape.
 alert tcp any any -> any 22 (msg:"SOC SSH connection burst (possible brute force)"; flow:to_server; flags:S; threshold:type both, track by_src, count 10, seconds 30; sid:1000005; rev:1;)
+
+# Many TCP SYNs from one host in a few seconds, across ports: port-scan shape.
+# sid in the 100000x range, so Wazuh rule 100300 raises it to level 10 on its own.
+alert tcp any any -> any any (msg:"SOC TCP port scan (SYN burst from one source)"; flow:to_server; flags:S; threshold:type both, track by_src, count 100, seconds 5; classtype:attempted-recon; sid:1000006; rev:1;)

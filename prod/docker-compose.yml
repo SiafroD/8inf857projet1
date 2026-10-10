@@ -70,14 +70,34 @@ services:
   # The products and users database. Only the backend can reach it (db network);
   # nothing in the public zone can.
   db:
-    image: docker.io/library/postgres:17.11-alpine
+    build: ./db
     environment:
       - POSTGRES_DB=shop
       - POSTGRES_USER=app
       - POSTGRES_PASSWORD=app_pw
+    # Log DDL and (dis)connections to a file the agent ships. A rogue CREATE ROLE is
+    # otherwise invisible. Fixed filename, rotation off: the agent follows one path.
+    command:
+      - -c
+      - logging_collector=on
+      - -c
+      - log_directory=/var/log/postgresql
+      - -c
+      - log_filename=postgresql.log
+      - -c
+      - log_rotation_age=0
+      - -c
+      - log_rotation_size=0
+      - -c
+      - log_statement=ddl
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pg-logs:/var/log/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d shop"]
       interval: 10s
@@ -86,17 +106,38 @@ services:
     networks:
       - db
 
+  # Same pattern as the other log agents: reads the PostgreSQL log from the shared
+  # volume and forwards it to the central syslog-ng (TCP 601), tagged "postgresql".
+  db-log-agent:
+    image: balabit/syslog-ng:3.38.1
+    depends_on:
+      db:
+        condition: service_started
+      syslog-ng:
+        condition: service_started
+    volumes:
+      - pg-logs:/logs:ro
+      - ./db/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+    entrypoint: ["syslog-ng"]
+    command: ["-F", "--no-caps"]
+    networks:
+      - logs
+
   # A plain Linux host on the public zone: sshd only, so the lab has an SSH login
   # to attack. Reached from a container on the public network; also published on
   # the box loopback (2222) for a demo through the tunnel, never on the Wi-Fi.
   ssh:
     build: ./ssh
+    # Fixes agent.name in Wazuh instead of the random container id.
+    hostname: ssh
     ports:
       - "127.0.0.1:2222:22"
     volumes:
       - ssh-logs:/var/log/sshd
     networks:
       - public
+      # Only to let its Wazuh agent reach the manager; see the agents network note.
+      - agents
 
   ssh-log-agent:
     image: balabit/syslog-ng:3.38.1
@@ -155,4 +196,5 @@ volumes:
   traefik-public-logs:
   ssh-logs:
   pgdata:
+  pg-logs:
   suricata-logs:

@@ -9,3 +9,12 @@
   <program_name>^suricata$</program_name>
   <plugin_decoder>JSON_Decoder</plugin_decoder>
 </decoder>
+
+<!--
+  PostgreSQL logs arrive from db-log-agent tagged program "postgresql". The stock
+  postgresql_log decoder keys off a bracketed-timestamp prematch that matched no
+  real log line in 4.14.8 (checked with wazuh-logtest), so decode by program name.
+-->
+<decoder name="postgresql">
+  <program_name>^postgresql$</program_name>
+</decoder>

@@ -75,8 +75,8 @@ sh attacks/run.sh 05-persistence/b-database
 # puis ouvrir http://127.0.0.1:8025 : un mail Wazuh « rôle SUPERUSER créé »
 ```
 
-Configuration et seuil : [`../siem/wazuh/README.md`](../siem/wazuh/README.md)
-(section *Notifications*).
+Configuration et seuil (`email_alert_level`, niveau >= 10) :
+[`../siem/wazuh/ossec.conf`](../siem/wazuh/ossec.conf).
 
 ## 4. Correspondance attaque → détection
 

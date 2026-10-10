@@ -75,13 +75,12 @@ Dans l'ordre de valeur :
 
 ## Perspectives (veille technologique)
 
-- **Détection par anomalie / ML** : pour voir *l'inconnu*, retourner la logique —
-  au lieu de chercher le connu-mauvais, faire ressortir l'anormal (pic ou chute
-  de volume d'une source, programme jamais vu). La **détection d'anomalie
-  d'Elastic** (jobs ML) va dans ce sens ; elle signalerait l'inondation et le
-  silence sans aucune règle. Elle demande une licence d'essai (hors Basic) et,
-  pour rester dans le rendu, doit être livrée comme configuration versionnée, pas
-  créée à la main dans l'UI.
+- **Détection par anomalie / ML** : une piste qu'on *pourrait* ajouter pour voir
+  *l'inconnu* — au lieu de chercher le connu-mauvais, faire ressortir l'anormal
+  (pic ou chute de volume d'une source, programme jamais vu). La détection
+  d'anomalie d'Elastic (jobs ML) va dans ce sens : elle signalerait l'inondation
+  et le silence sans aucune règle. Ce n'est pas une brique livrée ici (elle
+  demande une licence d'essai, hors Basic).
 - **Plusieurs points de vue** : un conteneur compromis peut couper *ses* logs
   (scénario 4a), mais pas son trafic réseau — Suricata continue de le voir.
   Croiser hôte (Wazuh) et réseau (Suricata) réduit l'angle mort qu'une seule

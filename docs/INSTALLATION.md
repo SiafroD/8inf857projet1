@@ -61,7 +61,7 @@ docker exec syslog-ng syslog-ng-ctl stats | grep -E 'dst.*(written|dropped)'
 ### 3. Wazuh manager (détection)
 
 Analyse la copie des logs et écrit ses alertes dans `alerts.json`, relues par le
-sidecar `wazuh-log-agent`. Détails et choix d'archi : [`../siem/wazuh/README.md`](../siem/wazuh/README.md).
+sidecar `wazuh-log-agent`.
 
 ```sh
 docker exec wazuh-manager /var/ossec/bin/wazuh-control status

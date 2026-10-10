@@ -126,18 +126,6 @@ Le détail et les vérifications service par service sont dans
 - Analyse, limites et pistes d'amélioration :
   [`docs/CONCLUSION.md`](docs/CONCLUSION.md).
 
-## Structure du dépôt
-
-```
-docker-compose.yml     # la carte : inclut les 3 zones et déclare les réseaux
-prod/                  # zone publique : traefik, nginx, backend, base, ssh, suricata
-admin/                 # entrée interne : traefik-admin -> Kibana (loopback)
-siem/                  # le SIEM : syslog-ng, Elasticsearch, Kibana, Wazuh, agents
-  elasticsearch/  kibana/  syslog-ng/  wazuh/  kibana-export/
-attacks/               # red team : 5 familles x 2 scénarios + run.sh
-docs/                  # cette documentation
-```
-
 ## Utilisation de l'intelligence artificielle
 
 Ce travail a été réalisé avec l'aide d'une IA générative. Une partie du contenu

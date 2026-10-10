@@ -120,6 +120,8 @@ Le détail et les vérifications service par service sont dans
 - Jouer les attaques : [`docs/UTILISATION.md`](docs/UTILISATION.md) et
   [`attacks/README.md`](attacks/README.md) (avec la justification de chaque
   famille).
+- Quels logs comptent pour chaque scénario, et pourquoi :
+  [`docs/LOGS.md`](docs/LOGS.md).
 - Lire les tableaux de bord : [`docs/VISUALISATION.md`](docs/VISUALISATION.md).
 - Analyse, limites et pistes d'amélioration :
   [`docs/CONCLUSION.md`](docs/CONCLUSION.md).

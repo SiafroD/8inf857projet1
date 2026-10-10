@@ -74,6 +74,23 @@ services:
       # Filebeat would ship the alerts to a Wazuh indexer; syslog-ng does it here.
       - ./wazuh/filebeat-down:/etc/services.d/filebeat/down:ro
       - wazuh-logs:/var/ossec/logs
+    depends_on:
+      mailpit:
+        condition: service_started
+    networks:
+      - data
+
+  # Catches the e-mail alerts Wazuh sends on a confirmed intrusion (level >= 10,
+  # siem/wazuh/ossec.conf). A real SMTP server would do; Mailpit needs no account
+  # and shows the mails in a web UI, so the notification is reproducible in the lab.
+  # UI on the loopback only; SMTP on 25 inside the data network (Wazuh dials port 25).
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.31.4
+    container_name: mailpit
+    environment:
+      - MP_SMTP_BIND_ADDR=0.0.0.0:25
+    ports:
+      - "127.0.0.1:8025:8025"
     networks:
       - data
 

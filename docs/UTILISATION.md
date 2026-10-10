@@ -53,24 +53,28 @@ Dans **Discover**, choisir la data view puis filtrer. Exemples (langage KQL) :
 
 Menu **Dashboards** :
 
-- **Wazuh – Vue d'ensemble** : la vue SOC générale (volume, gravité, MITRE, top
-  règles).
-- **Wazuh – Attaques par type** : une section **condensée** par famille — une
-  ligne = un type d'incident, pas vingt logs.
+- **Famille 1 … 5** : un dashboard par famille d'attaque, avec le détail de ses
+  sous-scénarios.
+- **SOC – Vue analyste** : la vue d'ensemble (volume, gravité, MITRE, top règles
+  / IP / services).
+- **Attaques par type** : une vue condensée transverse, une ligne = un type
+  d'incident.
 
 Lecture détaillée : [`VISUALISATION.md`](VISUALISATION.md).
 
 ## 3. La notification
 
-Dès qu'une alerte de **niveau ≥ 10** tombe (intrusion confirmée), Wazuh envoie un
-**courriel**. Dans le labo, il est reçu par **Mailpit**, un collecteur sans compte
-ni serveur externe, consultable sur **http://127.0.0.1:8025**.
+Sur un **incident confirmé**, Wazuh envoie un **courriel**, reçu dans le labo par
+**Mailpit** (sans compte ni serveur externe), sur **http://127.0.0.1:8025**.
+L'envoi est ciblé : seuil global niveau ≥ 12, plus un envoi forcé sur la force
+brute et sur la création d'un rôle pirate en base. Le bruit de scan (niveau 10)
+ne génère pas de mail.
 
-Déclencher et vérifier, par exemple avec le scan web :
+Déclencher et vérifier, par exemple avec la force brute SSH :
 
 ```sh
-sh attacks/run.sh 01-recon/a-web-scan
-# puis ouvrir http://127.0.0.1:8025 : un mail "Wazuh notification - Alert level 10"
+sh attacks/run.sh 03-bruteforce/a-ssh
+# puis ouvrir http://127.0.0.1:8025 : un mail d'alerte Wazuh sur la force brute
 ```
 
 Configuration et seuil : [`../siem/wazuh/README.md`](../siem/wazuh/README.md)
@@ -82,13 +86,19 @@ Où chaque scénario se voit, aujourd'hui :
 
 | Scénario | Détecté par | Où le voir |
 |---|---|---|
-| 1a. scan web | Suricata (règles SOC, niv 10) + nginx | alerte + dashboard Attaques |
+| 1a. scan web | Suricata (règles SOC, niv 10) | alerte + dashboard Reconnaissance |
 | 1b. scan de ports | — *(angle mort)* | logs bruts Suricata (`syslog-*`) |
-| 2a/2b. injection SQL | Suricata + nginx | alerte |
-| 3a. force brute SSH | Wazuh (sshd) + Suricata | alerte |
-| 3b. force brute web | échecs loggés | logs bruts / alerte d'échec |
-| 4a. silence / 4b. flood | — *(angle mort)* | logs bruts, volume anormal |
-| 5a. persistance SSH / 5b. base | — *(angle mort)* | voir CONCLUSION |
+| 2a/2b. injection SQL | Suricata (règle SOC) | alerte + dashboard Injection SQL |
+| 3a. force brute SSH | Wazuh (échecs `sshd`) + Suricata | alerte + dashboard Force brute |
+| 3b. force brute web | échecs journalisés *(pas de corrélation)* | logs bruts / alerte d'échec |
+| 4a. silence / 4b. flood | — *(angle mort)* | logs bruts, volume anormal (dashboard Famille 4) |
+| 5a. persistance SSH | **Wazuh FIM** (agent sur le serveur SSH) | alerte + dashboard Persistance |
+| 5b. persistance base | **Wazuh** (journal PostgreSQL + règle rôle) | alerte + dashboard Persistance |
 
-Les angles morts et les pistes pour les fermer sont expliqués dans
+> Suricata écoute le pont réseau et exige le mode Docker (ou `NET_RAW`) : sous
+> Podman rootless il ne démarre pas, et les familles **1 et 2** (qui dépendent de
+> ses signatures) n'apparaissent alors pas. Les familles 3, 4 et 5 reposent sur
+> Wazuh et marchent dans les deux cas.
+
+Les angles morts restants et les pistes pour les fermer sont expliqués dans
 [`CONCLUSION.md`](CONCLUSION.md).

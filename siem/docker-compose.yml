@@ -79,6 +79,8 @@ services:
         condition: service_started
     networks:
       - data
+      # Lets the public-zone ssh box agent reach 1514/1515; see the agents network note.
+      - agents
 
   # Catches the e-mail alerts Wazuh sends on a confirmed intrusion (level >= 10,
   # siem/wazuh/ossec.conf). A real SMTP server would do; Mailpit needs no account

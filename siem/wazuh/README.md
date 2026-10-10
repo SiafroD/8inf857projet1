@@ -28,3 +28,7 @@ Le template `wz-es-4.x-8.x-template.json` est installé avant le démarrage de s
 Les panneaux sont découpés par service (`predecoder.program_name`) et non par `agent.name`, qui vaut toujours `wazuh-manager` sans agent. Le filtre « NOT Audit de config du conteneur Wazuh (SCA) » masque l'audit que le manager fait de son propre conteneur ; un clic sur le filtre le désactive.
 
 Le Filebeat de l'image (fichier `filebeat-down`) et la détection de vulnérabilités sont coupés : ils visent un Wazuh indexer, que ce lab n'a pas.
+
+## Notifications
+
+Dès qu'une alerte de **niveau ≥ 10** tombe (intrusion confirmée : nos règles Suricata SOC, force brute, etc.), Wazuh envoie un courriel (`email_alert_level` dans `ossec.conf`). Il l'envoie en SMTP à **Mailpit** (`smtp_server: mailpit`), un collecteur sans compte ni serveur mail externe, pour que la notification soit reproductible dans le lab. Les mails se consultent sur http://127.0.0.1:8025. Dans un vrai déploiement, on remplace `mailpit` par un vrai serveur SMTP. `email_maxperhour` (12) borne le nombre de mails pour éviter l'inondation pendant une attaque.

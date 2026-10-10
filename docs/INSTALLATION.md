@@ -113,7 +113,10 @@ curl -s -H 'Host: kibana.localhost' http://127.0.0.1:8080/api/status \
   démarrage ; si on recrée syslog-ng, redémarrer aussi nginx.
 - **Podman** : l'isolation réseau est équivalente, mais l'équipe l'a surtout
   validé sous Docker. Sous Podman rootless, pointer le socket et vérifier les
-  noms de conteneurs (`podman compose ps`).
+  noms de conteneurs (`podman compose ps`). De plus, **Suricata ne
+  démarre pas sous Podman rootless** (capture AF_PACKET refusée) : les familles 1
+  et 2, qui dépendent de ses signatures, n’apparaissent alors pas - basculer
+  sous Docker pour les voir.
 - **Windows (Docker Desktop)** : cloner avec des fins de ligne **LF** (pas CRLF),
   sinon les scripts d'entrée (`entrypoint.sh`) et certaines configs cassent.
 - **Repartir de zéro** : `docker compose down -v` supprime **les volumes** (tous

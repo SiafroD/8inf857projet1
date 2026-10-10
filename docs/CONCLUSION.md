@@ -9,63 +9,75 @@ complète et de bout en bout :
   réseau, et la pile elle-même), en zones réseau isolées.
 - **Détection** par Wazuh, enrichie par **Suricata** (IDS réseau) dont les
   alertes sont décodées et remontées à niveau 10 pour nos signatures.
+- **Contrôle d'intégrité (FIM)** par un agent Wazuh sur le serveur SSH, et
+  **journalisation PostgreSQL** collectée : les deux scénarios de persistance
+  sont désormais vus (voir plus bas).
 - **Une seule base**, Elasticsearch, qui stocke logs bruts *et* alertes.
-- **Visualisation** par deux dashboards Kibana, dont une vue condensée par type
-  d'attaque.
-- **Notification** par courriel sur intrusion confirmée (niveau ≥ 10).
+- **Visualisation** par des dashboards Kibana : une vue analyste globale plus un
+  dashboard par famille d'attaque.
+- **Notification** par courriel sur incident confirmé, *ciblée* sur les règles
+  qui comptent (force brute, rôle pirate en base) pour ne pas noyer l'alerte
+  grave sous le bruit de scan.
 
-## Limites : ce que le SIEM ne voit pas
+## Démarche : test en aveugle, puis fermeture des trous
 
 Nous avons évalué la détection par un **test en aveugle** : un analyste a joué
-les dix scénarios et cherché à les retrouver *uniquement* depuis Kibana. Résultat
-honnête : la détection par **signature** voit le connu, mais reste aveugle à
-plusieurs attaques.
+les dix scénarios et cherché à les retrouver *uniquement* depuis Kibana. Le
+premier passage a montré que la détection par **signature** voit le connu mais
+laissait plusieurs attaques invisibles ; la blue team a ensuite fermé une partie
+de ces trous. État après cette boucle :
 
-| Attaque | Vue dans les alertes ? | Pourquoi |
+| Attaque | Vue ? | Comment |
 |---|---|---|
-| Scan web, injections SQL, force brute | **Oui** | règles Suricata/Wazuh existantes |
-| Scan de ports | Non | flux Suricata présents mais non exploités par une règle |
-| Altération des logs (silence, flood) | Non | aucune règle ne guette une source qui se tait ou un pic |
-| Persistance SSH (clé, profil) | Non | demande le *contrôle d'intégrité de fichiers* (FIM), donc un agent Wazuh sur l'hôte |
-| Persistance en base (rôle pirate) | Non | PostgreSQL ne journalise rien par défaut, et ses logs ne sont pas collectés |
+| Scan web, injections SQL | **Oui** | signatures Suricata (règles SOC) |
+| Force brute SSH | **Oui** | échecs `sshd` décodés par Wazuh + rafale vue par Suricata |
+| Persistance SSH (clé, profil) | **Oui, fermé** | agent Wazuh + FIM temps réel sur `/home/sysadmin/.ssh` et `.bashrc` |
+| Persistance en base (rôle pirate) | **Oui, fermé** | journalisation DDL PostgreSQL + règle sur `CREATE/ALTER ROLE ... SUPERUSER` |
+| Scan de ports | Non | flux Suricata présents, aucune règle ne les exploite |
+| Altération des logs (silence, flood) | Non | aucune règle ne guette une source qui se tait ou un pic de volume |
+| Force brute *web* (backend) | Partiel | les échecs sont journalisés, mais pas de règle de corrélation « N échecs » côté backend |
 
-Le constat de fond : **un dashboard ne montre que ce qu'on lui a appris à
-chercher.** Une attaque sans règle ne produit aucune alerte, donc n'apparaît pas
-— elle n'existe que dans les logs bruts, qu'il faut fouiller à la main.
+Le constat de fond ne change pas : **un dashboard ne montre que ce qu'on lui a
+appris à chercher.** Fermer un trou = écrire une détection de plus. Une attaque
+sans règle ne produit aucune alerte ; elle n'existe que dans les logs bruts,
+qu'il faut fouiller à la main.
 
 Autres limites :
 
-- **Sans agent Wazuh**, toutes les alertes portent le même `agent.name`
-  (`wazuh-manager`) ; on distingue l'origine par le nom de programme, pas par un
-  hôte propre.
 - **Double comptage** : une requête traverse Traefik *et* nginx, et Suricata la
-  voit sur deux segments ; une attaque génère donc beaucoup d'événements (la vue
-  condensée atténue l'effet à l'affichage).
+  voit sur deux segments ; une attaque génère donc beaucoup d'événements (les
+  dashboards agrègent par type pour atténuer l'effet à l'affichage).
+- **Sans agent partout**, les alertes issues de la seule copie syslog portent le
+  même `agent.name` (`wazuh-manager`) ; on distingue l'origine par le nom de
+  programme. Le serveur SSH, lui, a un vrai agent (`ssh`).
 - **Labo, pas production** : sécurité Elasticsearch désactivée, mots de passe
-  faibles volontaires, Mailpit à la place d'un vrai serveur SMTP.
+  faibles volontaires, Mailpit à la place d'un vrai SMTP, enrôlement d'agent
+  Wazuh sans mot de passe.
 
-## Améliorations possibles
+## Ce qui reste à faire
 
-Fermer les angles morts, dans l'ordre de valeur :
+Dans l'ordre de valeur :
 
-1. **Journaliser PostgreSQL** (`log_statement`) et collecter ses logs → détecter
-   la création d'un rôle/d'un superutilisateur (persistance en base).
-2. **Agent Wazuh + FIM** sur le serveur SSH → détecter la clé et le profil shell
-   déposés (persistance SSH), et donner un vrai `agent.name`.
-3. **Règle de corrélation backend** « N échecs puis un succès » → signaler un
-   compte compromis, que les échecs seuls ne montrent pas.
-4. **Règle sur les flux Suricata** pour le scan de ports.
+1. **Règle sur les flux Suricata** pour le scan de ports.
+2. **Détection d'absence / de volume** pour l'altération des logs (voir
+   perspectives).
+3. **Règle de corrélation backend** « N échecs puis un succès » → compte web
+   compromis.
 
 ## Perspectives (veille technologique)
 
 - **Détection par anomalie / ML** : pour voir *l'inconnu*, retourner la logique —
   au lieu de chercher le connu-mauvais, faire ressortir l'anormal (pic ou chute
   de volume d'une source, programme jamais vu). La **détection d'anomalie
-  d'Elastic** (jobs ML) va dans ce sens ; elle aurait signalé l'inondation et le
-  silence sans aucune règle. Elle demande une licence d'essai (hors Basic).
-- **Agents Wazuh** sur les hôtes pour l'intégrité de fichiers, l'inventaire et la
-  réponse active (bloquer une IP automatiquement).
-- **Réponse automatisée** (active response Wazuh) et notifications multi-canal
-  (Slack/Teams) au-delà du courriel.
+  d'Elastic** (jobs ML) va dans ce sens ; elle signalerait l'inondation et le
+  silence sans aucune règle. Elle demande une licence d'essai (hors Basic) et,
+  pour rester dans le rendu, doit être livrée comme configuration versionnée, pas
+  créée à la main dans l'UI.
+- **Plusieurs points de vue** : un conteneur compromis peut couper *ses* logs
+  (scénario 4a), mais pas son trafic réseau — Suricata continue de le voir.
+  Croiser hôte (Wazuh) et réseau (Suricata) réduit l'angle mort qu'une seule
+  source laisse.
+- **Agents Wazuh** sur plus d'hôtes (intégrité, inventaire, réponse active :
+  bloquer une IP automatiquement).
 - **Enrichissement** : géolocalisation des IP, corrélation inter-sources,
   tableaux de conformité (PCI-DSS déjà fournis par Wazuh).
